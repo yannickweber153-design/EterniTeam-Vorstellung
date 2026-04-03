@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EterniTeam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ─── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#09090b}
+
+/* ─── TOKENS ─── */
+:root{
+  --dark:#141e2d;--light:#f5f7fa;
+  --tx-d:#e8edf2;--tx-l:#0d1520;
+  --dim-d:rgba(232,237,242,.62);--dim-l:rgba(13,21,32,.52);
+  --accent:#4dd9a0;--accent2:#35c78a;--adim:rgba(77,217,160,.12);
+  --ld:rgba(255,255,255,.09);--ll:rgba(13,21,32,.09);
+  --sp:cubic-bezier(.16,1,.3,1);--ci:cubic-bezier(.76,0,.24,1);
+}
+
+/* ─── DECK ─── */
+#deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+
+.slide{
+  position:absolute;inset:0;overflow:hidden;
+  opacity:0;visibility:hidden;transform:scale(1.04);
+  transition:opacity 650ms var(--ci),transform 780ms var(--sp),visibility 0s linear 780ms;
+}
+.slide.active{
+  opacity:1;visibility:visible;transform:scale(1);
+  transition:opacity 650ms var(--ci),transform 780ms var(--sp),visibility 0s;
+}
+.slide.prev{opacity:0;visibility:visible;transform:scale(.96)}
+.slide.dark{background:var(--dark);color:var(--tx-d)}
+.slide.light{background:var(--light);color:var(--tx-l)}
+/* subtle dark vignette softener */
+.slide.dark::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 60% 40%,rgba(255,255,255,.03),transparent 70%);pointer-events:none;z-index:0}
+
+/* ─── STAGGER ─── */
+@keyframes up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.slide.active .ani{animation:up .9s var(--sp) calc(var(--i,0)*85ms + 80ms) both}
+
+/* ─── PAGE: flex column, fills slide exactly ─── */
+.page{
+  position:relative;z-index:1;
+  width:min(1640px,calc(100vw - 72px));
+  height:100%;margin:0 auto;
+  display:flex;flex-direction:column;
+  padding:32px 0 32px;
+  overflow:hidden;
+}
+
+/* ─── TOPBAR ─── */
+.topbar{flex:none;display:flex;align-items:center;justify-content:space-between;padding-bottom:20px;min-height:0}
+.logo{display:flex;align-items:center;gap:10px}
+.logo svg{width:30px;height:21px;flex:none}
+.logo-wm{font-size:16px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.logo-wm em{color:var(--accent);font-style:normal}
+.sl-label{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase}
+.dark .sl-label,.dark .sl-num{color:var(--dim-d)}
+.light .sl-label,.light .sl-num{color:var(--dim-l)}
+.sl-num{font-size:11px;font-weight:600;letter-spacing:.14em}
+
+/* ─── TYPOGRAPHY ─── */
+.hxl{font-size:clamp(36px,3.8vw,72px);line-height:.94;letter-spacing:-.05em;font-weight:900}
+.hlg{font-size:clamp(28px,3vw,58px);line-height:.95;letter-spacing:-.045em;font-weight:800}
+.hmd{font-size:clamp(20px,2vw,38px);line-height:.97;letter-spacing:-.04em;font-weight:800}
+.hsm{font-size:clamp(14px,1.3vw,22px);line-height:1.1;letter-spacing:-.03em;font-weight:700}
+.hxl em,.hlg em,.hmd em{font-style:normal;color:var(--accent)}
+.bxl{font-size:clamp(14px,1.3vw,18px);line-height:1.55}
+.blg{font-size:clamp(12px,1.1vw,15px);line-height:1.6}
+.bsm{font-size:12px;line-height:1.62}
+.dark .bxl,.dark .blg,.dark .bsm{color:var(--dim-d)}
+.light .bxl,.light .blg,.light .bsm{color:var(--dim-l)}
+.lbl{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;opacity:.45}
+
+/* ─── BUTTONS ─── */
+.btn{display:inline-flex;align-items:center;gap:9px;height:52px;padding:0 26px;border-radius:999px;border:none;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity 180ms,transform 180ms}
+.btn:hover{opacity:.82;transform:scale(.98)}
+.btn-p{background:var(--accent);color:#071410}
+.btn-g{background:transparent;color:var(--tx-d);border:1px solid rgba(255,255,255,.15)}
+
+/* ─── DIVIDER ─── */
+.dark .hr{background:var(--ld)}.light .hr{background:var(--ll)}
+.hr{height:1px;width:100%}
+
+/* ═══ SLIDE 0 – HERO ═══
+   page → topbar / hero-grid (flex:1) / metrics (flex:none)
+*/
+.hero-grid{
+  flex:1;min-height:0;
+  display:grid;grid-template-columns:1fr min(44%,620px);
+  gap:32px;align-items:stretch;
+}
+.hero-text{display:flex;flex-direction:column;justify-content:center;gap:20px}
+.hero-btns{display:flex;gap:10px;margin-top:4px}
+/* image fills its grid cell */
+.hero-img{overflow:hidden;border-radius:20px;position:relative}
+.hero-img img,.slot-img{width:100%;height:100%;object-fit:cover;display:block}
+.img-cap{
+  position:absolute;bottom:18px;left:18px;right:18px;
+  padding:14px 18px;border-radius:12px;
+  background:rgba(0,0,0,.52);backdrop-filter:blur(12px);
+  color:#fff;border:1px solid rgba(255,255,255,.1);
+}
+.img-cap strong{display:block;font-size:15px;font-weight:700;letter-spacing:-.02em;margin-bottom:2px}
+.img-cap span{font-size:12px;color:rgba(255,255,255,.68);line-height:1.4}
+
+.metrics{
+  flex:none;
+  display:grid;grid-template-columns:repeat(3,1fr);
+  padding-top:18px;margin-top:12px;
+}
+.metric{display:flex;flex-direction:column;gap:5px;padding-right:24px}
+.metric+.metric{padding-left:24px;border-left:1px solid var(--ld)}
+.metric:last-child{padding-right:0}
+.mnum{font-size:clamp(22px,2.4vw,44px);line-height:.92;letter-spacing:-.06em;font-weight:900}
+.metric p{font-size:12px;line-height:1.5;color:var(--dim-d);max-width:20ch}
+
+/* ═══ SLIDE 1 – PROBLEM ═══ */
+.prob-grid{
+  flex:1;min-height:0;
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:52px;align-items:stretch;
+}
+.prob-text{display:flex;flex-direction:column;justify-content:center;gap:16px}
+.prob-list{display:flex;flex-direction:column}
+.prob-item{display:grid;grid-template-columns:40px 1fr;gap:14px;padding:16px 0;border-top:1px solid var(--ll);align-items:start}
+.prob-item:last-child{border-bottom:1px solid var(--ll)}
+.pnum{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--accent);margin-top:3px}
+.prob-item strong{display:block;font-size:clamp(14px,1.4vw,19px);letter-spacing:-.03em;margin-bottom:4px;font-weight:700}
+.prob-item p{font-size:12px;line-height:1.55;color:var(--dim-l)}
+.prob-img-wrap{overflow:hidden;border-radius:18px;position:relative}
+.prob-img-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.prob-floats{position:absolute;inset:14px;display:flex;flex-direction:column;justify-content:flex-end;gap:8px}
+.prob-float{padding:14px 18px;border-radius:13px;background:rgba(255,255,255,.88);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);width:82%;margin-left:auto}
+.prob-float:first-child{width:72%}
+.prob-float h3{font-size:14px;letter-spacing:-.03em;color:#09090b;font-weight:700}
+.prob-float p{font-size:11px;line-height:1.45;color:rgba(9,9,11,.55);margin-top:2px}
+
+/* ═══ SLIDE 2 – APPROACH ═══ */
+.appr-grid{
+  flex:1;min-height:0;
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:56px;align-items:stretch;
+}
+.appr-text{display:flex;flex-direction:column;justify-content:center;gap:16px}
+.appr-steps{display:flex;flex-direction:column}
+.appr-step{display:grid;grid-template-columns:34px 1fr;gap:14px;padding:18px 0;border-top:1px solid var(--ld);align-items:start}
+.appr-step:last-child{border-bottom:1px solid var(--ld)}
+.snum{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--accent);margin-top:3px}
+.appr-step strong{display:block;font-size:clamp(15px,1.5vw,22px);letter-spacing:-.04em;margin-bottom:5px;font-weight:700}
+.appr-step p{font-size:12px;line-height:1.55;color:var(--dim-d)}
+.appr-img{overflow:hidden;border-radius:18px;position:relative}
+.appr-img img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* ═══ SLIDE 3 – ALIGNMENT ═══ */
+.align-layout{flex:1;min-height:0;display:flex;flex-direction:column;gap:0}
+.align-head{flex:none;display:grid;grid-template-columns:1.1fr .8fr;gap:40px;align-items:end;padding-bottom:24px}
+.align-cols{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);overflow:hidden}
+.align-col{padding:22px 28px;border-left:1px solid var(--ll);overflow:hidden}
+.align-col:first-child{border-left:none;padding-left:0}
+.align-col .lbl{margin-bottom:14px}
+.align-col h3{font-size:clamp(16px,1.6vw,28px);letter-spacing:-.04em;font-weight:800;margin-bottom:14px;line-height:1.0}
+.align-pts{display:flex;flex-direction:column;gap:12px}
+.align-pt{padding-left:12px;border-left:2px solid var(--ll);font-size:12px;line-height:1.55}
+.align-pt strong{display:block;font-size:13px;letter-spacing:-.02em;font-weight:700;margin-bottom:1px}
+.align-pt span{color:var(--dim-l)}
+
+/* ═══ SLIDE 4 – COMPARISON ═══ */
+.cmp-layout{flex:1;min-height:0;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.ctable{width:100%;border-collapse:collapse}
+.ctable th{padding:10px 18px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border-bottom:1px solid var(--ll)}
+.ctable th:first-child{padding-left:0;width:26%}
+.ctable th.th-et{color:var(--accent2)}
+.ctable th.th-alt{color:var(--dim-l)}
+.ctable td{padding:13px 18px;font-size:13px;border-bottom:1px solid var(--ll);vertical-align:top;line-height:1.45}
+.ctable td:first-child{padding-left:0;font-size:14px;font-weight:600;letter-spacing:-.01em}
+.ctable td.et{background:rgba(62,207,142,.05)}
+.ck{color:var(--accent2);font-size:13px}.cx{color:rgba(9,9,11,.28);font-size:13px}
+.ck::before{content:"✓ "}.cx::before{content:"– "}
+
+/* ═══ SLIDE 5 – OWNERSHIP ═══ */
+.own-layout{
+  flex:1;min-height:0;
+  display:grid;grid-template-columns:.44fr 1fr .46fr;
+  gap:28px;align-items:center;
+}
+.phase-list{display:flex;flex-direction:column;gap:2px}
+.pb{text-align:left;padding:13px 15px;border-radius:10px;border:none;background:transparent;color:var(--tx-d);cursor:pointer;transition:background 200ms}
+.pb:hover{background:rgba(255,255,255,.04)}
+.pb.on{background:var(--adim)}
+.pb .pn{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.pb .pt{font-size:13px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+.pb.on .pt{color:var(--accent)}
+.pb .ps{font-size:11px;line-height:1.45;color:var(--dim-d);margin-top:4px;display:none}
+.pb.on .ps{display:block}
+
+.donut-wrap{display:flex;align-items:center;justify-content:center;position:relative;height:100%}
+.donut-svg{width:100%;max-width:380px;aspect-ratio:1;flex:none}
+.d-track{fill:none;stroke:rgba(255,255,255,.05);stroke-width:44}
+.d-seg{fill:none;stroke-width:44;stroke-linecap:butt;transition:stroke-dasharray .95s var(--sp),stroke-dashoffset .95s var(--sp)}
+.d-et{stroke:rgba(255,255,255,.84)}.d-gf{stroke:var(--accent)}.d-tm{stroke:rgba(93,224,168,.5)}
+.donut-center{position:absolute;text-align:center;pointer-events:none}
+.d-big{font-size:clamp(28px,3.6vw,60px);font-weight:900;line-height:.9;letter-spacing:-.07em}
+.d-sub{display:block;margin-top:6px;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--dim-d)}
+
+.own-detail{display:flex;flex-direction:column;gap:16px}
+.od-title{font-size:clamp(14px,1.3vw,22px);font-weight:800;letter-spacing:-.03em;line-height:1.15}
+.od-desc{font-size:12px;line-height:1.65;color:var(--dim-d)}
+.legend{display:flex;flex-direction:column;gap:9px;padding-top:16px;border-top:1px solid var(--ld)}
+.lg-row{display:flex;align-items:center;gap:9px}
+.lg-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.lg-name{flex:1;font-size:12px;color:var(--dim-d)}
+.lg-pct{font-size:20px;font-weight:800;letter-spacing:-.04em;min-width:48px;text-align:right}
+
+/* ═══ SLIDE 6 – GROWTH ═══ */
+.grw-layout{flex:1;min-height:0;display:flex;flex-direction:column;gap:0;overflow:hidden}
+.grw-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);overflow:hidden}
+.grw-col{padding:20px 28px;border-left:1px solid var(--ld);display:flex;flex-direction:column}
+.grw-col:first-child{border-left:none;padding-left:0}
+.grw-col .lbl{margin-bottom:16px}
+.grw-num{font-size:clamp(28px,3.2vw,56px);line-height:.9;letter-spacing:-.06em;font-weight:900;color:var(--accent);margin-bottom:12px}
+.grw-col .bsm{color:var(--dim-d);margin-top:8px}
+.meter-b{margin-top:auto;padding-top:20px;display:flex;flex-direction:column;gap:7px}
+.m-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim-d)}
+.m-lbl strong{color:var(--tx-d)}
+.m-track{height:2px;background:rgba(255,255,255,.09);border-radius:999px;overflow:hidden}
+.m-fill{height:100%;background:var(--accent);border-radius:inherit;transform-origin:left}
+
+/* ═══ SLIDE 7 – MAP ═══ */
+.map-layout{
+  flex:1;min-height:0;
+  display:grid;grid-template-columns:1.25fr .62fr;
+  gap:20px;
+}
+.map-stage{overflow:hidden;border-radius:18px;background:#0a0f14;border:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;position:relative}
+.map-svg-inner{width:100%;height:100%;padding:20px;display:flex;align-items:center;justify-content:center}
+.de-map{width:auto;height:100%;max-height:100%}
+.de-fill{fill:rgba(255,255,255,.045);stroke:rgba(255,255,255,.18);stroke-width:1.4;stroke-linejoin:round}
+.de-int{fill:none;stroke:rgba(255,255,255,.055);stroke-width:.7}
+.mp{cursor:pointer}
+.pr{fill:none;stroke:var(--accent);stroke-width:1.5;transform-origin:50% 50%;transform-box:fill-box;animation:pr 2.8s ease-out infinite}
+.pr2{animation-delay:1.2s}
+@keyframes pr{0%{transform:scale(.4);opacity:.85}100%{transform:scale(2.6);opacity:0}}
+.pd{fill:var(--accent);transition:r 170ms ease,fill 170ms ease}
+.mp.on .pd{fill:#fff}
+.deal-panel{display:flex;flex-direction:column;padding:24px;background:rgba(255,255,255,.03);border:1px solid var(--ld);border-radius:18px;gap:12px;overflow:hidden}
+.deal-t{transition:opacity 280ms ease,transform 280ms var(--sp)}
+.deal-t.out{opacity:0;transform:translateY(6px)}
+.d-tag{display:inline-flex;padding:4px 10px;border-radius:999px;background:var(--adim);color:var(--accent);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;width:fit-content}
+.d-title{font-size:clamp(16px,1.6vw,26px);font-weight:800;letter-spacing:-.04em;line-height:1.1}
+.d-badge{display:inline-flex;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.07);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim-d);width:fit-content}
+.d-desc{font-size:12px;line-height:1.62;color:var(--dim-d)}
+.d-meta{display:flex;flex-direction:column;gap:7px;padding-top:12px;border-top:1px solid var(--ld);margin-top:auto}
+.dm{display:flex;justify-content:space-between;gap:12px;font-size:11px}
+.dm-k{color:var(--dim-d)}.dm-v{font-weight:600;color:var(--tx-d);text-align:right}
+
+/* ═══ SLIDE 8 – TEAM ═══ */
+.team-layout{flex:1;min-height:0;display:flex;flex-direction:column;gap:0;overflow:hidden}
+.team-head{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:end;padding-bottom:28px}
+.team-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden}
+.person{padding:20px 24px;border-left:1px solid var(--ll);overflow:hidden}
+.person:first-child{border-left:none;padding-left:0}
+.p-av{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:var(--adim);color:var(--accent2);font-size:13px;font-weight:800;margin-bottom:12px;flex:none}
+.person strong{display:block;font-size:clamp(13px,1.3vw,17px);letter-spacing:-.03em;font-weight:700;margin-bottom:3px}
+.person span{font-size:11px;line-height:1.55;color:var(--dim-l)}
+
+/* ═══ SLIDE 9 – CTA ═══ */
+.cta-layout{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:20px}
+.cta-line{width:1px;height:44px;background:linear-gradient(to bottom,transparent,var(--accent),transparent);margin:0 auto}
+.cta-foot{font-size:11px;color:var(--dim-d);margin-top:2px}
+
+/* ─── NAV ─── */
+#np,#nn{position:fixed;top:50%;z-index:20;width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);backdrop-filter:blur(8px);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity 200ms,background 200ms}
+#np{left:12px;transform:translateY(-50%)}#nn{right:12px;transform:translateY(-50%)}
+#np:hover,#nn:hover{background:rgba(255,255,255,.1)}
+#np.dim,#nn.dim{opacity:.25;pointer-events:none}
+#dots{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:6px}
+.dot{width:5px;height:5px;border-radius:50%;border:none;background:rgba(255,255,255,.3);cursor:pointer;transition:width 260ms,background 260ms,border-radius 260ms}
+.dot.on{width:20px;border-radius:999px;background:rgba(255,255,255,.9)}
+#ctr{position:fixed;right:20px;bottom:15px;z-index:20;font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.3)}
+#bar{position:fixed;bottom:0;left:0;z-index:20;height:2px;background:var(--accent);transition:width 550ms var(--sp)}
+
+/* ─── LOGO HELPER ─── */
+.logo-svg-d{--s:white;--s2:#5de0a8}
+.logo-svg-l{--s:#09090b;--s2:#5de0a8}
+
+/* ══ HERO VISUAL (replaces image) ══ */
+.hero-visual{display:flex;align-items:center;justify-content:center;position:relative}
+.pulse-ring-wrap{position:relative;width:min(400px,100%);aspect-ratio:1;display:flex;align-items:center;justify-content:center}
+.pulse-ring{position:absolute;border-radius:50%;border:1.5px solid var(--accent);animation:pulse-out 4s ease-in-out infinite}
+.pr1{width:100%;height:100%;animation-delay:0s}
+.pr2{width:68%;height:68%;animation-delay:1.3s}
+.pr3{width:36%;height:36%;animation-delay:2.6s;border-width:2.5px}
+@keyframes pulse-out{0%,100%{transform:scale(1);opacity:.08}50%{transform:scale(1.05);opacity:.22}}
+.pulse-core{position:relative;z-index:1;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px}
+.pc-num{font-size:clamp(52px,6vw,100px);font-weight:900;letter-spacing:-.08em;line-height:.88;color:var(--accent);text-shadow:0 0 80px rgba(77,217,160,.35)}
+.pc-lbl{font-size:clamp(10px,.9vw,13px);color:var(--dim-d);line-height:1.55;letter-spacing:.02em;max-width:18ch}
+
+/* ══ PROBLEM CARDS (replaces image) ══ */
+.prob-cards{display:flex;flex-direction:column;justify-content:center;gap:14px}
+.pcard{padding:22px 26px;border:1px solid rgba(9,9,11,.1);border-radius:16px;background:#fff;box-shadow:0 2px 12px rgba(9,9,11,.04);transition:border-color 220ms,box-shadow 220ms;position:relative;overflow:hidden}
+.pcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent2);border-radius:0 2px 2px 0;opacity:.7}
+.pcard:hover{border-color:rgba(62,207,142,.35);box-shadow:0 6px 28px rgba(62,207,142,.1)}
+.pcard-num{font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--accent2);margin-bottom:8px}
+.pcard h3{font-size:clamp(14px,1.4vw,18px);font-weight:700;letter-spacing:-.03em;color:var(--tx-l);margin-bottom:5px;line-height:1.2}
+.pcard p{font-size:12px;line-height:1.62;color:var(--dim-l)}
+
+/* ══ APPROACH VISUAL (replaces image) ══ */
+.appr-visual{display:flex;align-items:center;justify-content:center}
+.av-inner{
+  width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;
+  gap:24px;padding:52px 44px;border:1px solid rgba(255,255,255,.08);
+  border-radius:24px;background:linear-gradient(135deg,rgba(77,217,160,.06) 0%,rgba(255,255,255,.01) 100%);
+  position:relative;overflow:hidden;
+}
+.av-inner::before{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(77,217,160,.12),transparent 70%);pointer-events:none}
+.av-accent{width:48px;height:3px;background:var(--accent);border-radius:999px}
+.av-quote{font-size:clamp(26px,2.8vw,50px);font-weight:900;letter-spacing:-.055em;line-height:.97;color:var(--tx-d)}
+.av-quote em{color:var(--accent);font-style:normal;display:block}
+.av-sub{font-size:12px;line-height:1.65;color:var(--dim-d);max-width:28ch;margin-top:4px}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width:980px){
+  html,body{overflow:auto}
+  #deck{overflow:visible}
+  .slide{position:relative;opacity:1!important;visibility:visible!important;transform:none!important;min-height:100svh;overflow:visible}
+  .slide.active .ani{animation:none!important;opacity:1;transform:none}
+  .page{width:calc(100vw - 32px);padding:24px 0 60px;height:auto;overflow:visible}
+  .hero-grid,.prob-grid,.appr-grid,.align-head,.team-head{grid-template-columns:1fr}
+  .align-cols,.grw-grid{grid-template-columns:1fr}
+  .own-layout{grid-template-columns:1fr}
+  .map-layout{grid-template-columns:1fr}
+  .align-col,.grw-col{border-left:none;border-top:1px solid var(--ll);padding:16px 0}
+  .team-grid{grid-template-columns:repeat(2,1fr)}
+  .hero-img,.appr-img,.prob-img-wrap{min-height:240px}
+  .map-stage{min-height:280px}
+  #np,#nn,#dots,#ctr,#bar{display:none}
+}
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- ══ S0 HERO ══ -->
+<section class="slide dark active" id="s0">
+<div class="page">
+  <header class="topbar ani" style="--i:0">
+    <div class="logo">
+      <svg class="logo-svg-d" viewBox="0 0 80 56" fill="none">
+        <ellipse cx="28" cy="28" rx="19" ry="19" stroke="white" stroke-width="3.5" fill="none" opacity=".9"/>
+        <ellipse cx="52" cy="28" rx="19" ry="19" stroke="#5de0a8" stroke-width="3.5" fill="none" opacity=".9"/>
+        <circle cx="28" cy="28" r="4.5" fill="white"/><circle cx="52" cy="28" r="4.5" fill="#5de0a8"/>
+      </svg>
+      <div class="logo-wm"><span>eterni</span><em>team</em></div>
+    </div>
+    <div class="sl-label">Unternehmensnachfolge neu gedacht</div>
+    <div class="sl-num">01 / 10</div>
+  </header>
+
+  <div class="hero-grid">
+    <div class="hero-text">
+      <h1 class="hxl ani" style="--i:1">Unternehmensnachfolge<br><em>neu gedacht.</em></h1>
+      <p class="bxl ani" style="--i:2">EterniTeam kauft Ihr Unternehmen, bewahrt seine Identität und führt es Schritt für Schritt zurück in die Hände des Teams.</p>
+      <div class="hero-btns ani" style="--i:3">
+        <button class="btn btn-p" onclick="goTo(1)">Präsentation starten <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+        <a class="btn btn-g" href="mailto:deal@eterniteam.de">deal@eterniteam.de</a>
+      </div>
+    </div>
+    <div class="hero-img ani" style="--i:2" data-depth="12">
+      <img src="file:///Users/yannickweber/Desktop/Bild%201.jpg" alt="">
+      <div class="img-cap">
+        <strong>Der Moment vor der Übergabe</strong>
+        <span>Wenn Haltung und Kontinuität wichtiger sind als nur ein Käufer.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="metrics ani" style="--i:4">
+    <div class="metric"><div class="mnum">700.000</div><p>Unternehmen brauchen in den nächsten Jahren eine belastbare Nachfolge.</p></div>
+    <div class="metric"><div class="mnum">80%+</div><p>Langfristige Zielgröße für Eigentum bei Führung und Team.</p></div>
+    <div class="metric"><div class="mnum">Für immer</div><p>Keine Exit-Logik. Keine spätere Verwertung des Lebenswerks.</p></div>
+  </div>
+</div>
+</section>
+
+<!-- ══ S1 PROBLEM ══ -->
+<section class="slide light" id="s1">
+<div class="page">
+  <header class="topbar ani" style="--i:0">
+    <div class="logo">
+      <svg viewBox="0 0 80 56" fill="none"><ellipse cx="28" cy="28" rx="19" ry="19" stroke="#09090b" stroke-width="3.5" fill="none"/><ellipse cx="52" cy="28" rx="19" ry="19" stroke="#5de0a8" stroke-width="3.5" fill="none"/><circle cx="28" cy="28" r="4.5" fill="#09090b"/><circle cx="52" cy="28" r="4.5" fill="#5de0a8"/></svg>
+      <div class="logo-wm" style="color:var(--tx-l)"><span>eterni</span><em>team</em></div>
+    </div>
+    <div class="sl-label">Die Ausgangslage</div><div class="sl-num">02 / 10</div>
+  </header>
+  <div class="prob-grid">
+    <div class="prob-text">
+      <p class="lbl ani" style="--i:0">Problem</p>
+      <h2 class="hlg ani" style="--i:1">Das Problem ist nicht<br>der Verkauf.</h2>
+      <p class="bxl ani" style="--i:2">Es ist das, was danach aus Kultur, Team und unternehmerischer Substanz wird.</p>
+      <div class="prob-list">
+        <div class="prob-item ani" style="--i:3"><div class="pnum">01</div><div><strong>Kein interner Nachfolger</strong><p>Kinder, Führungskräfte oder Mitarbeitende übernehmen oft nicht, obwohl das Unternehmen gesund ist.</p></div></div>
+        <div class="prob-item ani" style="--i:4"><div class="pnum">02</div><div><strong>Angst vor kulturellem Verlust</strong><p>Ein ungeeigneter Käufer verändert Marke, Prozesse und Arbeitsplätze meist schneller als geplant.</p></div></div>
+        <div class="prob-item ani" style="--i:5"><div class="pnum">03</div><div><strong>Falsche Anreizsysteme im Markt</strong><p>Finanzinvestoren verkaufen wieder. Konzerne integrieren. Das Lebenswerk wird zum Asset.</p></div></div>
+      </div>
+    </div>
+    <div class="prob-img-wrap ani" style="--i:2">
+      <img src="file:///Users/yannickweber/Desktop/Bild%202.jpg" alt="">
+      <div class="prob-floats">
+        <div class="prob-float"><h3>Die Marke verschwindet</h3><p>Aus regionaler Identität wird eine Unterseite im Konzernportfolio.</p></div>
+        <div class="prob-float"><h3>Das Team verliert Halt</h3><p>Unsicherheit erzeugt Fluktuation genau in dem Moment, in dem Stabilität gebraucht wird.</p></div>
+        <div class="prob-float"><h3>Das Lebenswerk verliert Richtung</h3><p>Wert wird extrahiert, aber kaum jemand übernimmt Verantwortung für Kontinuität.</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══ S2 APPROACH ══ -->
+<section class="slide dark" id="s2">
+<div class="page">
+  <header class="topbar ani" style="--i:0">
+    <div class="logo"><svg viewBox="0 0 80 56" fill="none"><ellipse cx="28" cy="28" rx="19" ry="19" stroke="white" stroke-width="3.5" fill="none"/><ellipse cx="52" cy="28" rx="19" ry="19" stroke="#5de0a8" stroke-width="3.5" fill="none"/><circle cx="28" cy="28" r="4.5" fill="white"/><circle cx="52" cy="28" r="4.5" fill="#5de0a8"/></svg><div class="logo-wm"><span>eterni</span><em>team</em></div></div>
+    <div class="sl-label">Unser Modell</div><div class="sl-num">03 / 10</div>
+  </header>
+  <div class="appr-grid">
+    <div class="appr-text">
+      <p class="lbl ani" style="--i:0">Ansatz</p>
+      <h2 class="hlg ani" style="--i:1">Wir kaufen.<br><em>Und geben<br>Kontrolle zurück.</em></h2>
+      <p class="bxl ani" style="--i:2">EterniTeam ist kein Käufer mit Exit-Plan, sondern der Übergang zu einer Struktur, in der operative Führung und Team immer mehr Eigentum aufbauen.</p>
+      <div class="appr-steps ani" style="--i:3">
+        <div class="appr-step"><div class="snum">01</div><div><strong>Stabilisieren</strong><p>Unternehmen bleibt eigenständig. Führung, Team und Kunden erleben keinen Bruch.</p></div></div>
+        <div class="appr-step"><div class="snum">02</div><div><strong>Verantwortung verankern</strong><p>Neue Geschäftsführung und Mitarbeitende erhalten von Beginn an echte Beteiligung.</p></div></div>
+        <div class="appr-step"><div class="snum">03</div><div><strong>Eigentum verschieben</strong><p>Rückkäufe aus Gewinnen lassen den Team-Anteil planbar und sichtbar wachsen.</p></div></div>
+      </div>
+      <div class="ani" style="--i:4;margin-top:8px"><button class="btn btn-p" onclick="goTo(5)">Ownership-Modell ansehen</button></div>
+    </div>
+    <div class="appr-img ani" style="--i:2">
+      <img src="file:///Users/yannickweber/Desktop/Bild%203.jpg" alt="">
+      <div class="img-cap"><strong>Übergabe mit Haltung</strong><span>Kein Exit-Moment, sondern der Start einer sauberen Nachfolge.</span></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══ S3 ALIGNMENT ══ -->
+<section class="slide light" id="s3">
+<div class="page">
+  <header class="topbar ani" style="--i:0">
+    <div class="logo"><svg viewBox="0 0 80 56" fill="none"><ellipse cx="28" cy="28" rx="19" ry="19" stroke="#09090b" stroke-width="3.5" fill="none"/><ellipse cx="52" cy="28" rx="19" ry="19" stroke="#5de0a8" stroke-width="3.5" fill="none"/><circle cx="28" cy="28" r="4.5" fill="#09090b"/><circle cx="52" cy="28" r="4.5" fill="#5de0a8"/></svg><div class="logo-wm" style="color:var(--tx-l)"><span>eterni</span><em>team</em></div></div>
+    <div class="sl-label">Eine Lösung für alle</div><div class="sl-num">04 / 10</div>
+  </header>
+  <div class="align-layout">
+    <div class="align-head">
+      <h2 class="hlg ani" style="--i:0">Keine Gewinnerseite.<br>Nur Ausrichtung.</h2>
+      <p class="bxl ani" style="--i:1">Alle drei Perspektiven erhalten Sicherheit, Anreiz und Zukunft — gleichzeitig.</p>
+    </div>
+    <div class="align-cols ani" style="--i:2">
+      <div class="align-col">
+        <p class="lbl">Für Verkäufer</p>
+        <h3>Das Lebenswerk<br>bleibt erkennbar.</h3>
+        <div class="align-pts">
+          <div class="align-pt"><strong>Unabhängigkeit statt Integration</strong><span>Marke, Kultur und regionaler Ruf bleiben intakt.</span></div>
+          <div class="align-pt"><strong>Keine Exit-Story nach dem Exit</strong><span>Sie verkaufen nicht in ein System, das später wieder verkauft.</span></div>
+          <div class="align-pt"><strong>Fairer Preis, faire Struktur</strong><span>Klare Konditionen ohne versteckte Integrationslogik.</span></div>
+        </div>
+      </div>
+      <div class="align-col">
+        <p class="lbl">Für neue Geschäftsführung</p>
+        <h3>Unternehmerisch,<br>aber nicht allein.</h3>
+        <div class="align-pts">
+          <div class="align-pt"><strong>Eigentum von Tag eins</strong><span>Führung erhält echte Beteiligung statt Bonus-Scheinlogik.</span></div>
+          <div class="align-pt"><strong>Operativer Rückhalt</strong><span>Community, Recruiting und Prozesse wachsen mit.</span></div>
+          <div class="align-pt"><strong>Klarer Wachstumspfad</strong><span>Anteil steigt planbar über Rückkäufe aus dem laufenden Betrieb.</span></div>
+        </div>
+      </div>
+      <div class="align-col">
+        <p class="lbl">Für das Team</p>
+        <h3>Jobs bleiben nicht nur<br>sicher. Sie werden<br>wertvoller.</h3>
+        <div class="align-pts">
+          <div class="align-pt"><strong>Anteile schaffen Bindung</strong><span>Mitarbeitende partizipieren direkt am langfristigen Erfolg.</span></div>
+          <div class="align-pt"><strong>Mehr Motivation, weniger Fluktuation</strong><span>Ownership macht aus Unsicherheit einen gemeinsamen Plan.</span></div>
+          <div class="align-pt"><strong>Stabilität im Übergang</strong><span>Keine Überraschungen bei Kultur, Führung oder Strukturen.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══ S4 COMPARISON ══ -->
+<section class="slide light" id="s4">
+<div class="page">
+  <header class="topbar ani" style="--i:0">
+    <div class="logo"><svg viewBox="0 0 80 56" fill="none"><ellipse cx="28" cy="28" rx="19" ry="19" stroke="#09090b" stroke-width="3.5" fill="none"/><ellipse cx="52" cy="28" rx="19" ry="19" stroke="#5de0a8" stroke-width="3.5" fill="none"/><circle cx="28" cy="28" r="4.5" fill="#09090b"/><circle cx="52" cy="28" r="4.5" fill="#5de0a8"/></svg><div class="logo-wm" style="color:var(--tx-l)"><span>eterni</span><em>team</em></div></div>
+    <div class="sl-label">Warum EterniTeam</div><div class="sl-num">05 / 10</div>
+  </header>
+  <div class="cmp-layout">
+    <h2 class="hlg ani" style="--i:0">Nicht nur ein besserer Käufer.<br>Ein anderes Betriebssystem.</h2>
+    <div class="ani" style="--i:2">
+      <table class="ctable">
+        <thead>
+          <tr>
+            <th></th><th class="th-et">EterniTeam</th><th class="th-alt">Finanzinvestor</th><th class="th-alt">Konzern</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Team wird Miteigentümer</td><td class="et"><span class="ck">Von Tag eins an, planbar und sichtbar</span></td><td><span class="cx">Selten, meist kurzfristig</span></td><td><span class="cx">Kein Eigentum, nur Anstellung</span></td></tr>
+          <tr><td>Keine Weiterveräußerung</td><td class="et"><span class="ck">Kein Exit-Plan, kein Verkaufsdruck</span></td><td><span class="cx">Exit ist Teil des Modells</span></td><td><span class="cx">Integration und Absorption</span></td></tr>
+          <tr><td>Marke bleibt eigenständig</td><td class="et"><span class="ck">Identität und Kultur bleiben intakt</span></td><td><span class="cx">Oft Vereinheitlichung für Portfolio</span></td><td><span class="cx">Marke wird absorbiert</span></td></tr>
+          <tr><td>Operative Nähe</td><td class="et"><span class="ck">Echte Begleitung im Alltag</span></td><td><span class="cx">Strategie ja, Umsetzung selten</span></td><td><span class="cx">Zentrale Steuerung, wenig Autonomie</span></td></tr>
+          <tr><td>Neue GF als Unternehmer</td><td class="et"><span class="ck">Attraktiver Unternehmerpfad mit Beteiligung</span></td><td><span class="cx">Angestellte Führung mit Zielen</span></td><td><span class="cx">Führungskraft im Konzernrahmen</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══ S5 OWNERSHIP ══ -->
+<section class="slide dark" id="s5">
+<div class="page">
+  <header class="topbar ani" style="--i:0">
+    <div class="logo"><svg viewBox="0 0 80 56" fill="none"><ellipse cx="28" cy="28" rx="19" ry="19" stroke="white" stroke-width="3.5" fill="none"/><ellipse cx="52" cy="28" rx="19" ry="19" stroke="#5de0a8" stroke-width="3.5" fill="none"/><circle cx="28" cy="28" r="4.5" fill="white"/><circle cx="52" cy="28" r="4.5" fill="#5de0a8"/></svg><div class="logo-wm"><span>eterni</span><em>team</em></div></div>
+    <div class="sl-label">Ownership in Bewegung</div><div class="sl-num">06 / 10</div>
+  </header>
+  <div class="own-layout">
+    <div class="phase-list ani" style="--i:1">
+      <button class="pb on" data-phase="0"><div class="pn">Tag 1</div><div class="pt">Vollständige Übernahme</div><div class="ps">EterniTeam übernimmt 100%, damit Stabilität sofort gesichert ist.</div></button>
+      <button class="pb" data-phase="1"><div class="pn">Sofort</div><div class="pt">Erste Beteiligung</div><div class="ps">Geschäftsführung und Team erhalten direkt einen spürbaren Anteil.</div></button>
+      <button class="pb" data-phase="2"><div class="pn">Jahr 5</div><div class="pt">Rückkäufe aus Gewinnen</div><div class="ps">Segment für Segment wandert Eigentum aus der Holding zurück.</div></button>
+      <button class="pb" data-phase="3"><div class="pn">Jahr 15+</div><div class="pt">Team-Mehrheit</div><div class="ps">Führung und Mitarbeitende kontrollieren mehr als 80%.</div></button>
+    </div>
+    <div class="donut-wrap ani" style="--i:2">
+      <svg class="donut-svg" viewBox="0 0 400 400" style="transform:rotate(-90deg)">
+        <circle class="d-track" cx="200" cy="200" r="138"/>
+        <circle id="det" class="d-seg d-et" cx="200" cy="200" r="138"/>
+        <circle id="dgf" class="d-seg d-gf" cx="200" cy="200" r="138"/>
+        <circle id="dtm" class="d-seg d-tm" cx="200" cy="200" r="138"/>
+      </svg>
+      <div class="donut-center">
+        <div class="d-big" id="dpct">100%</div>
+        <span class="d-sub" id="dlbl">EterniTeam</span>
+      </div>
+    </div>
+    <div class="own-detail ani" style="--i:3">
+      <p class="lbl">Aktuelle Phase</p>
+      <div class="od-title" id="odt">EterniTeam erwirbt 100%</div>
+      <p class="od-desc" id="odd">Vollständige Übernahme. Das Unternehmen erhält sofort Stabilität, während Führung, Team und Kunden Kontinuität erleben.</p>
+      <div class="legend">
+        <div class="lg-row"><div class="lg-dot" style="background:rgba(255,255,255,.82)"></div><div class="lg-name">EterniTeam</div><div class="lg-pct" id="let">100%</div></div>
+        <div class="lg-row"><div class="lg-dot" style="background:var(--accent)"></div><div class="lg-name">Neue Geschäftsführung</div><div class="lg-pct" id="lgf">0%</div></div>
+        <div class="lg-row"><div class="lg-dot" style="background:rgba(93,224,168,.5)"></div><div class="lg-name">Team</div><div class="lg-pct" id="ltm">0%</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══ S6 GROWTH ══ -->
+<section class="slide dark" id="s6">
+<div class="page">
+  <header class="topbar ani" style="--i:0">
+    <div class="logo"><svg viewBox="0 0 80 56" fill="none"><ellipse cx="28" cy="28" rx="19" ry="19" stroke="white" stroke-width="3.5" fill="none"/><ellipse cx="52" cy="28" rx="19" ry="19" stroke="#5de0a8" stroke-width="3.5" fill="none"/><circle cx="28" cy="28" r="4.5" fill="white"/><circle cx="52" cy="28" r="4.5" fill="#5de0a8"/></svg><div class="logo-wm"><span>eterni</span><em>team</em></div></div>
+    <div class="sl-label">Gemeinsame Wertsteigerung</div><div class="sl-num">07 / 10</div>
+  </header>
+  <div class="grw-layout">
+    <h2 class="hlg ani" style="--i:0;flex:none;padding-bottom:18px">Wachstum entsteht, wenn Verantwortung<br>und Unterstützung gleichzeitig steigen.</h2>
+    <div class="grw-grid ani" style="--i:2">
+      <div class="grw-col">
+        <p class="lbl">Mehr Nachfrage</p>
+        <div class="grw-num">↑86%</div>
+        <div class="hsm">Professionelles<br>Marketing &amp; Recruiting</div>
+        <p class="bsm">Kleinere Unternehmen erhalten plötzlich Zugang zu skalierbarem Marketing und professionellen Vertriebswegen.</p>
+        <div class="meter-b"><div class="m-lbl"><span>Wachstumspotenzial</span><strong>Hoch</strong></div><div class="m-track"><div class="m-fill" style="width:86%"></div></div></div>
+      </div>
+      <div class="grw-col">
+        <p class="lbl">Mehr Austausch</p>
+        <div class="grw-num">×12</div>
+        <div class="hsm">Netzwerk aus<br>Portfolio-Unternehmen</div>
+        <p class="bsm">Geschäftsführungen lösen operative Probleme gemeinsam statt jeder allein — echte Peer-Community.</p>
+        <div class="meter-b"><div class="m-lbl"><span>Netzwerkeffekt</span><strong>Stark</strong></div><div class="m-track"><div class="m-fill" style="width:74%"></div></div></div>
+      </div>
+      <div class="grw-col">
+        <p class="lbl">Mehr Effizienz</p>
+        <div class="grw-num">↑92%</div>
+        <div class="hsm">Operative Prozesse<br>auf neuem Niveau</div>
+        <p class="bsm">Buchhaltung, HR, Digitalisierung und Prozessoptimierung heben das Unternehmen operativ deutlich an.</p>
+        <div class="meter-b"><div class="m-lbl"><span>Effizienzgewinn</span><strong>Sehr hoch</strong></div><div class="m-track"><div class="m-fill" style="width:92%"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══ S7 MAP ══ -->
+<section class="slide dark" id="s7">
+<div class="page">
+  <header class="topbar ani" style="--i:0">
+    <div class="logo"><svg viewBox="0 0 80 56" fill="none"><ellipse cx="28" cy="28" rx="19" ry="19" stroke="white" stroke-width="3.5" fill="none"/><ellipse cx="52" cy="28" rx="19" ry="19" stroke="#5de0a8" stroke-width="3.5" fill="none"/><circle cx="28" cy="28" r="4.5" fill="white"/><circle cx="52" cy="28" r="4.5" fill="#5de0a8"/></svg><div class="logo-wm"><span>eterni</span><em>team</em></div></div>
+    <div class="sl-label">Closed Deals</div><div class="sl-num">08 / 10</div>
+  </header>
+  <div class="map-layout">
+    <div class="map-stage ani" style="--i:1">
+      <div class="map-svg-inner">
+        <svg class="de-map" viewBox="0 0 330 410" xmlns="http://www.w3.org/2000/svg">
+          <path class="de-fill" d="M82 0 L121 10 L145 35 L167 55 L210 48 L253 35 L292 52 L310 80 L318 120 L320 160 L319 195 L305 222 L285 247 L267 267 L252 287 L231 302 L248 322 L267 340 L240 357 L214 370 L178 383 L150 375 L125 369 L95 369 L57 373 L50 357 L60 332 L78 307 L65 287 L36 282 L22 264 L4 247 L3 213 L7 177 L25 157 L36 127 L43 82 L55 57 L65 30 Z"/>
+          <path class="de-int" d="M43 82 C80 88 145 87 210 82"/>
+          <path class="de-int" d="M7 177 C60 173 145 170 260 172"/>
+          <path class="de-int" d="M100 170 C102 210 104 255 112 300"/>
+          <path class="de-int" d="M205 82 C210 130 215 190 220 240"/>
+          <path class="de-int" d="M155 280 C185 270 225 268 265 265"/>
+          <!-- Pin 0: Hamburg -->
+          <g class="mp" data-deal="0"><circle class="pr" cx="148" cy="78" r="11"/><circle class="pr pr2" cx="148" cy="78" r="11"/><circle class="pd" id="pd0" cx="148" cy="78" r="5.5"/></g>
+          <!-- Pin 1: Ruhrgebiet -->
+          <g class="mp" data-deal="1"><circle class="pr" cx="52" cy="192" r="11" style="animation-delay:.7s"/><circle class="pr pr2" cx="52" cy="192" r="11" style="animation-delay:1.9s"/><circle class="pd" id="pd1" cx="52" cy="192" r="5.5"/></g>
+          <!-- Pin 2: Berlin -->
+          <g class="mp" data-deal="2"><circle class="pr" cx="262" cy="133" r="11" style="animation-delay:1.2s"/><circle class="pr pr2" cx="262" cy="133" r="11" style="animation-delay:2.4s"/><circle class="pd" id="pd2" cx="262" cy="133" r="5.5"/></g>
+          <!-- Pin 3: Bayern -->
+          <g class="mp" data-deal="3"><circle class="pr" cx="196" cy="354" r="11" style="animation-delay:1.8s"/><circle class="pr pr2" cx="196" cy="354" r="11" style="animation-delay:3s"/><circle class="pd" id="pd3" cx="196" cy="354" r="5.5"/></g>
+        </svg>
+      </div>
+    </div>
+    <div class="deal-panel ani" style="--i:2">
+      <p class="lbl">Ausgewählter Deal</p>
+      <div class="deal-t" id="deal-inner">
+        <div class="d-tag" id="dreg">Norddeutschland</div>
+        <div class="d-title" id="dtit">Fenster- &amp;<br>Türen-Installateur</div>
+        <div class="d-badge" id="dclo">Closing Q4 2025</div>
+        <p class="d-desc" id="ddesc">Spezialist für Fenster, Türen und Sonnenschutz mit eigenem Montageteam und hohem regionalen Vertrauen im Bestandsgeschäft.</p>
+        <div class="d-meta">
+          <div class="dm"><span class="dm-k">Unternehmensart</span><span class="dm-v" id="dtype">Handwerk / Bau</span></div>
+          <div class="dm"><span class="dm-k">Profil</span><span class="dm-v" id="dprof">Montage + Service</span></div>
+          <div class="dm"><span class="dm-k">Status</span><span class="dm-v" id="dstat">Integriert in die Gruppe</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══ S8 TEAM ══ -->
+<section class="slide light" id="s8">
+<div class="page">
+  <header class="topbar ani" style="--i:0">
+    <div class="logo"><svg viewBox="0 0 80 56" fill="none"><ellipse cx="28" cy="28" rx="19" ry="19" stroke="#09090b" stroke-width="3.5" fill="none"/><ellipse cx="52" cy="28" rx="19" ry="19" stroke="#5de0a8" stroke-width="3.5" fill="none"/><circle cx="28" cy="28" r="4.5" fill="#09090b"/><circle cx="52" cy="28" r="4.5" fill="#5de0a8"/></svg><div class="logo-wm" style="color:var(--tx-l)"><span>eterni</span><em>team</em></div></div>
+    <div class="sl-label">Team &amp; Investoren</div><div class="sl-num">09 / 10</div>
+  </header>
+  <div class="team-layout">
+    <div class="team-head">
+      <div>
+        <p class="lbl ani" style="--i:0">Team</p>
+        <h2 class="hlg ani" style="--i:1">Menschen, die Nachfolge nicht nur finanzieren.<br><em>Sie bauen sie.</em></h2>
+      </div>
+      <p class="bxl ani" style="--i:2">Operative Unternehmer, Produktdenker und erfahrene Investoren geben dem Modell Glaubwürdigkeit auf beiden Seiten des Tisches.</p>
+    </div>
+    <div class="team-grid ani" style="--i:3">
+      <div class="person"><div class="p-av">DK</div><strong>Dennis Konrad</strong><span>Co-Founder &amp; CIO · eGroup · thyssenkrupp · Universität Münster</span></div>
+      <div class="person"><div class="p-av">MV</div><strong>Motive Ventures</strong><span>Hauptinvestor mit Verständnis für Plattformen, Unternehmerpfade und Skalierung</span></div>
+      <div class="person"><div class="p-av">MW</div><strong>Matthias Wilrich</strong><span>Co-Founder &amp; CEO · 11+ Jahre Unternehmertum · Accenture · WHU</span></div>
+      <div class="person"><div class="p-av">OH</div><strong>Oskar Hartmann</strong><span>Flaschenpost · Auto1 · Flink · operative Systemerfahrung im Wachstum</span></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ══ S9 CTA ══ -->
+<section class="slide dark" id="s9">
+<div class="page">
+  <header class="topbar ani" style="--i:0">
+    <div class="logo"><svg viewBox="0 0 80 56" fill="none"><ellipse cx="28" cy="28" rx="19" ry="19" stroke="white" stroke-width="3.5" fill="none"/><ellipse cx="52" cy="28" rx="19" ry="19" stroke="#5de0a8" stroke-width="3.5" fill="none"/><circle cx="28" cy="28" r="4.5" fill="white"/><circle cx="52" cy="28" r="4.5" fill="#5de0a8"/></svg><div class="logo-wm"><span>eterni</span><em>team</em></div></div>
+    <div class="sl-label">Der nächste Schritt</div><div class="sl-num">10 / 10</div>
+  </header>
+  <div class="cta-layout">
+    <div class="cta-line ani" style="--i:0"></div>
+    <h2 class="hlg ani" style="--i:1">Lassen Sie uns darüber sprechen,<br>wie Ihr <em>Lebenswerk weiterlebt.</em></h2>
+    <p class="bxl ani" style="--i:2;max-width:44ch">Ein vertrauliches Gespräch. Kein Pitch. Kein Druck. Sondern eine saubere Diskussion darüber, was Ihr Unternehmen langfristig verdient.</p>
+    <a class="btn btn-p ani" style="--i:3" href="mailto:deal@eterniteam.de">deal@eterniteam.de <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+    <div class="cta-foot ani" style="--i:4">Dennis Konrad · EterniTeam GmbH · Berlin</div>
+  </div>
+</div>
+</section>
+
+</div><!-- #deck -->
+
+<div id="bar"></div>
+<div id="dots"></div>
+<div id="ctr">01 / 10</div>
+<button id="np" aria-label="Zurück"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+<button id="nn" aria-label="Weiter"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></button>
+
+<script>
+/* ─── ENGINE ─── */
+const slides = Array.from(document.querySelectorAll('.slide'));
+const N = slides.length;
+let cur = 0, busy = false, wlk = false;
+const dotsEl = document.getElementById('dots');
+const ctrEl = document.getElementById('ctr');
+const barEl = document.getElementById('bar');
+const np = document.getElementById('np');
+const nn = document.getElementById('nn');
+
+for (let i = 0; i < N; i++) {
+  const d = document.createElement('button');
+  d.className = 'dot' + (i === 0 ? ' on' : '');
+  d.addEventListener('click', () => go(i));
+  dotsEl.appendChild(d);
+}
+
+function ui() {
+  const isL = slides[cur].classList.contains('light');
+  dotsEl.querySelectorAll('.dot').forEach((d, i) => {
+    d.classList.toggle('on', i === cur);
+    d.style.background = i === cur ? (isL ? 'rgba(9,9,11,.88)' : 'rgba(255,255,255,.9)') : (isL ? 'rgba(9,9,11,.2)' : 'rgba(255,255,255,.28)');
+  });
+  ctrEl.textContent = String(cur+1).padStart(2,'0') + ' / ' + String(N).padStart(2,'0');
+  ctrEl.style.color = isL ? 'rgba(9,9,11,.28)' : 'rgba(255,255,255,.28)';
+  barEl.style.width = (cur / (N-1) * 100) + '%';
+  [np, nn].forEach(b => { b.style.borderColor = isL ? 'rgba(9,9,11,.1)' : 'rgba(255,255,255,.1)'; b.style.background = isL ? 'rgba(9,9,11,.04)' : 'rgba(255,255,255,.04)'; b.style.color = isL ? '#09090b' : '#fff'; });
+  np.classList.toggle('dim', cur === 0);
+  nn.classList.toggle('dim', cur === N-1);
+}
+
+function go(idx) {
+  if (idx < 0 || idx >= N || idx === cur || busy) return;
+  busy = true;
+  const p = cur; cur = idx;
+  slides[p].classList.remove('active'); slides[p].classList.add('prev');
+  slides[cur].classList.add('active'); slides[cur].classList.remove('prev');
+  ui();
+  if (cur === 5 && !opPlayed) opAutoplay();
+  if (cur === 7 && !mpPlayed) mapAutoplay();
+  setTimeout(() => { slides.forEach((s,i) => { if (i!==cur) s.classList.remove('prev'); }); busy = false; }, 800);
+}
+
+np.addEventListener('click', () => go(cur-1));
+nn.addEventListener('click', () => go(cur+1));
+document.addEventListener('keydown', e => {
+  if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); go(cur+1); }
+  if (['ArrowLeft','ArrowUp'].includes(e.key)) { e.preventDefault(); go(cur-1); }
+});
+let tx0 = 0;
+document.addEventListener('touchstart', e => { tx0 = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', e => { const dx = tx0 - e.changedTouches[0].clientX; if (Math.abs(dx) > 50) go(dx>0 ? cur+1 : cur-1); }, {passive:true});
+document.addEventListener('wheel', e => {
+  if (window.innerWidth <= 980) return;
+  e.preventDefault();
+  if (wlk) return; wlk = true; setTimeout(() => { wlk = false; }, 680);
+  if (Math.abs(e.deltaY) < 12 && Math.abs(e.deltaX) < 12) return;
+  go(e.deltaY > 0 || e.deltaX > 0 ? cur+1 : cur-1);
+}, {passive:false});
+
+/* ─── PARALLAX ─── */
+let mx=0,my=0,cx=0,cy=0;
+document.addEventListener('mousemove', e => { mx=(e.clientX/window.innerWidth-.5); my=(e.clientY/window.innerHeight-.5); });
+(function raf(){cx+=(mx-cx)*.06;cy+=(my-cy)*.06;document.querySelectorAll('[data-depth]').forEach(el=>{const d=+el.dataset.depth;el.style.transform=`translate(${cx*d}px,${cy*d}px)`;});requestAnimationFrame(raf);})();
+
+/* ─── OWNERSHIP ─── */
+const CIRC = 2*Math.PI*138;
+const phases = [
+  {et:100,gf:0,tm:0,pct:100,lbl:'EterniTeam',title:'EterniTeam erwirbt 100%',desc:'Vollständige Übernahme. Das Unternehmen erhält sofort Stabilität, während Führung, Team und Kunden Kontinuität erleben.'},
+  {et:80,gf:10,tm:10,pct:20,lbl:'Team + GF',title:'Die erste Beteiligung wird sichtbar',desc:'Geschäftsführung und Team erhalten direkt einen spürbaren Anteil. Aus Übernahme wird gemeinsame Zukunft.'},
+  {et:52,gf:24,tm:24,pct:48,lbl:'Team + GF',title:'Rückkäufe verschieben Eigentum',desc:'Segment für Segment wandert Eigentum aus der Holding zurück ins Unternehmen.'},
+  {et:18,gf:34,tm:48,pct:82,lbl:'Team + GF',title:'Die Mehrheit liegt im Unternehmen',desc:'Nach vielen Jahren ist das Lebenswerk dort angekommen, wo es hingehört: bei Menschen, die es täglich führen.'}
+];
+const SEG = {et:document.getElementById('det'),gf:document.getElementById('dgf'),tm:document.getElementById('dtm')};
+const PCT = document.getElementById('dpct'), LBL = document.getElementById('dlbl');
+const ODT = document.getElementById('odt'), ODD = document.getElementById('odd');
+const LEG = {et:document.getElementById('let'),gf:document.getElementById('lgf'),tm:document.getElementById('ltm')};
+const pbs = Array.from(document.querySelectorAll('.pb'));
+let opPlayed = false;
+
+function arc(p, off) {
+  const v = Math.max(p/100*CIRC-3, 0);
+  return {da:`${v} ${CIRC}`, do:`${-(off/100*CIRC)}`};
+}
+function countUp(el, from, to, dur) {
+  const t0 = performance.now();
+  (function f(now){ const t=Math.min((now-t0)/dur,1),e=1-Math.pow(1-t,3);el.textContent=Math.round(from+(to-from)*e)+'%';if(t<1)requestAnimationFrame(f); })(t0);
+}
+function setPhase(i) {
+  const p = phases[i];
+  pbs.forEach((b,j) => b.classList.toggle('on', j===i));
+  const ea=arc(p.et,0),ga=arc(p.gf,p.et),ta=arc(p.tm,p.et+p.gf);
+  SEG.et.style.strokeDasharray=ea.da; SEG.et.style.strokeDashoffset=ea.do;
+  SEG.gf.style.strokeDasharray=ga.da; SEG.gf.style.strokeDashoffset=ga.do;
+  SEG.tm.style.strokeDasharray=ta.da; SEG.tm.style.strokeDashoffset=ta.do;
+  countUp(PCT,parseInt(PCT.textContent)||0,p.pct,900);
+  countUp(LEG.et,parseInt(LEG.et.textContent)||0,p.et,900);
+  countUp(LEG.gf,parseInt(LEG.gf.textContent)||0,p.gf,900);
+  countUp(LEG.tm,parseInt(LEG.tm.textContent)||0,p.tm,900);
+  LBL.textContent=p.lbl; ODT.textContent=p.title; ODD.textContent=p.desc;
+}
+pbs.forEach(b => b.addEventListener('click', () => setPhase(+b.dataset.phase)));
+function opAutoplay() { opPlayed=true; [0,1,2,3].forEach(i=>setTimeout(()=>setPhase(i),i*1200)); }
+setPhase(0);
+
+/* ─── MAP ─── */
+const deals = [
+  {reg:'Norddeutschland',tit:'Fenster- & Türen-Installateur',clo:'Closing Q4 2025',typ:'Handwerk / Bau',pro:'Montage + Service',sta:'Integriert in die Gruppe',dsc:'Spezialist für Fenster, Türen und Sonnenschutz mit eigenem Montageteam und hohem regionalen Vertrauen im Bestandsgeschäft.'},
+  {reg:'Ruhrgebiet',tit:'SHK-Unternehmen',clo:'Closing Q4 2025',typ:'SHK / Modernisierung',pro:'Komplettbadsanierung',sta:'Portfolio-Unternehmen',dsc:'Regional führender Anbieter für Komplettbadsanierungen mit starkem Empfehlungsnetzwerk und wiederkehrendem Bestandsgeschäft.'},
+  {reg:'Berlin / Brandenburg',tit:'Frischehandel',clo:'Closing Q3 2025',typ:'Food Distribution',pro:'B2B + Kühlflotte',sta:'Operativ begleitet',dsc:'Regionaler Großhändler für Obst, Gemüse und Convenience mit eigener Logistik und klarer lokaler Marktposition.'},
+  {reg:'Bayern',tit:'Industrieservice Süd',clo:'Closing Q1 2026',typ:'B2B Services',pro:'Wartung + Bestand',sta:'Deal kürzlich geschlossen',dsc:'Spezialisierter technischer Dienstleister mit hoher Kundenbindung und attraktivem Nachfolgeszenario.'}
+];
+const pins = Array.from(document.querySelectorAll('.mp'));
+const DI = document.getElementById('deal-inner');
+let mpPlayed = false;
+
+function setDeal(i, anim) {
+  pins.forEach((p,j) => { p.classList.toggle('on',j===i); document.getElementById('pd'+j).setAttribute('r', j===i?'7':'5.5'); });
+  const d=deals[i];
+  if(anim){DI.classList.add('out');setTimeout(()=>{fill(d);DI.classList.remove('out');},300);}else fill(d);
+}
+function fill(d){
+  document.getElementById('dreg').textContent=d.reg;
+  document.getElementById('dtit').innerHTML=d.tit.replace(' & ',' &amp;<br>');
+  document.getElementById('dclo').textContent=d.clo;
+  document.getElementById('ddesc').textContent=d.dsc;
+  document.getElementById('dtype').textContent=d.typ;
+  document.getElementById('dprof').textContent=d.pro;
+  document.getElementById('dstat').textContent=d.sta;
+}
+pins.forEach(p => p.addEventListener('click', () => setDeal(+p.dataset.deal, true)));
+function mapAutoplay(){mpPlayed=true;[0,1,2,3].forEach(i=>setTimeout(()=>setDeal(i,true),i*900+500));}
+setDeal(0,false);
+ui();
+</script>
+</body>
+</html>
